@@ -1,6 +1,6 @@
 # Title:          ESET Enterprise Inspector Data Connector
 # Language:       Python
-# Version:        1.0
+# Version:        1.1
 # Author(s):      ESET Netherlands - Donny Maasland
 # Last Modified:  11/25/2020
 # Comment:        Initial release
