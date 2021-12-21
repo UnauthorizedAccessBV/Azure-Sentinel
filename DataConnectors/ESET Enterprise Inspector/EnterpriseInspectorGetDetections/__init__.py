@@ -6,7 +6,7 @@
 # Comment:        Initial release
 #
 # DESCRIPTION
-# This Function App calls the ESET Enterprise Inspector API (https://help.eset.com/eei/1.5/en-US/api.html)
+# This Function App calls the ESET Enterprise Inspector API (https://help.eset.com/eei/latest/en-US/api.html)
 # and gathers all new detections that have been triggered.
 #
 # The response from the ESET Enterprise Inspector API is recieved in JSON format. This function will build

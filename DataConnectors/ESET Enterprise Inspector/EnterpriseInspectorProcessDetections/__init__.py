@@ -1,12 +1,12 @@
 # Title:          ESET Enterprise Inspector Data Connector
 # Language:       Python
-# Version:        1.0
+# Version:        1.1
 # Author(s):      ESET Netherlands - Donny Maasland
 # Last Modified:  11/25/2020
 # Comment:        Initial release
 #
 # DESCRIPTION
-# This Function App calls the ESET Enterprise Inspector API (https://help.eset.com/eei/1.5/en-US/api.html)
+# This Function App calls the ESET Enterprise Inspector API (https://help.eset.com/eei/latest/en-US/api.html)
 # and gathers all new detections that have been triggered.
 #
 # The response from the ESET Enterprise Inspector API is recieved in JSON format. This function will build
