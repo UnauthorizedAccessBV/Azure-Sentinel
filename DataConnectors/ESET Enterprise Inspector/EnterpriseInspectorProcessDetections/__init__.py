@@ -2,8 +2,8 @@
 # Language:       Python
 # Version:        1.1
 # Author(s):      ESET Netherlands - Donny Maasland
-# Last Modified:  11/25/2020
-# Comment:        Initial release
+# Last Modified:  12/21/2021
+# Comment:        Add support for cloud hosted instances
 #
 # DESCRIPTION
 # This Function App calls the ESET Enterprise Inspector API (https://help.eset.com/eei/latest/en-US/api.html)
@@ -12,7 +12,7 @@
 # The response from the ESET Enterprise Inspector API is recieved in JSON format. This function will build
 # the signature and authorization header needed to post the data to the Log Analytics workspace via 
 # the HTTP Data Connector API. The Function App will will post all detections to the ESETEnterpriseInspector_CL
-# table in Log Analytivs.
+# table in Log Analytics.
 
 import logging
 import json
@@ -24,7 +24,9 @@ import azure.functions as func
 from datacollector import post_data
 from distutils.util import strtobool
 from enterpriseinspector import EnterpriseInspector
+from esetinspect.models import _to_json
 
+ei = None
 
 def main(eeimsg: func.QueueMessage) -> None:
 
@@ -32,14 +34,15 @@ def main(eeimsg: func.QueueMessage) -> None:
     logging.info(f"Queue trigger function processed item: {detection['id']}")
 
     # Set variables
-    base_url = os.environ['baseUrl']
-    username = os.environ['eeiUsername']
-    password = os.environ['eeiPassword']
-    domain = bool(strtobool(os.environ['domainLogin']))
-    verify = bool(strtobool(os.environ['verifySsl']))
-    workspace_id = os.environ['workspaceId']
-    workspace_key = os.environ['workspaceKey']
-    logAnalyticsUri = os.environ.get('logAnalyticsUri')
+    base_url = os.getenv('baseUrl')
+    client_id = os.getenv('clientId')
+    username = os.getenv('eeiUsername')
+    password = os.getenv('eeiPassword')
+    domain = bool(strtobool(os.getenv('domainLogin')))
+    verify = bool(strtobool(os.getenv('verifySsl')))
+    workspace_id = os.getenv('workspaceId')
+    workspace_key = os.getenv('workspaceKey')
+    logAnalyticsUri = os.getenv('logAnalyticsUri')
     log_type = 'ESETEnterpriseInspector'
 
     if ((logAnalyticsUri in (None, '') or str(logAnalyticsUri).isspace())):    
@@ -52,19 +55,22 @@ def main(eeimsg: func.QueueMessage) -> None:
         raise Exception("ESET Enterprise Inspector: Invalid Log Analytics Uri.")
 
     # Connect to ESET Enterprise Inspector server
-    ei = EnterpriseInspector(
-        base_url=base_url,
-        username=username,
-        password=password,
-        domain=domain,
-        verify=verify
-    )
+    global ei
+    if ei is None:
+        ei = EnterpriseInspector(
+            base_url=base_url,
+            username=username,
+            password=password,
+            domain=domain,
+            verify=verify,
+            client_id=client_id
+        )
 
     # Get detection details
     detection_details = ei.detection_details(detection)
 
     # Send data via data collector API
-    body = json.dumps(detection_details)
+    body = json.dumps(detection_details, default=_to_json)
     post_data(
         customer_id=workspace_id,
         shared_key=workspace_key,

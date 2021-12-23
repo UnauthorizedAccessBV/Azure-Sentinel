@@ -19,6 +19,10 @@
             "type": "string",
             "defaultValue": "https://<Enterprise Inspector URL>"
         },
+        "clientId": {
+            "type": "string",
+            "defaultValue": "<Cloud instance ID>"
+        },
         "eeiUsername": {
             "type": "string",
             "defaultValue": "<eeiUsername>"
@@ -176,6 +180,7 @@
                         "workspaceId": "[parameters('WorkspaceId')]",
                         "workspaceKey": "[parameters('WorkspaceKey')]",
                         "baseUrl": "[parameters('baseUrl')]",
+                        "clientId": "[parameters('clientId')]",
                         "eeiUsername": "[parameters('eeiUsername')]",
                         "eeiPassword": "[parameters('eeiPassword')]",
                         "domainLogin": "[parameters('domainLogin')]",

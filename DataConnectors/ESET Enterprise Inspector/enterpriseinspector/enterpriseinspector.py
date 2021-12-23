@@ -1,13 +1,12 @@
-import requests
 import math
 import logging
 
 from urllib.parse import urljoin
-from enterpriseinspector.eifunctions import exit_error
+from esetinspect.client import EsetInspectClient
 
 class EnterpriseInspector:
     """A small class used for communicating with the ESET Enterprise Inspector server"""
-    def __init__(self, base_url, username, password, domain=False, verify=True):
+    def __init__(self, base_url, username, password, domain=False, verify=True, client_id=None):
         
         self.base_url = base_url
         self.username = username
@@ -16,87 +15,36 @@ class EnterpriseInspector:
         self.verify = verify
         self.page_size = 100
         self.token = None
+        self.client_id = client_id
+
+        self._client = EsetInspectClient(
+            url = self.base_url,
+            username = self.username,
+            password = self.password,
+            domain = self.domain,
+            verify = self.verify,
+            client_id = self.client_id
+        )
         
         if not self.verify:
             logging.warning(
                 'Verification of SSL certificate has been disabled!'
             )
 
-        self.login()
-
-
-    def login(self):
-
-        json = {
-            'username': self.username,
-            'password': self.password,
-            'domain' : self.domain
-        }
-
-        self.api_call(
-            endpoint='authenticate',
-            method='PUT',
-            json=json
-        )
-
-        if not self.token:
-            exit_error('Authentication failure')
-
-
-    def api_call(self, endpoint, method='GET', json={}, headers={}, params={}):
-
-        # Only need 'GET' and 'PUT' for now
-        if method.upper() == 'GET':
-            req = requests.get
-        elif method.upper() == 'PUT':
-            req = requests.put
-        else:
-            req = requests.get
-        
-        # Add authorization token to request if present
-        if self.token:
-            headers.update({
-                'Authorization': f'Bearer {self.token}'
-            })
-
-        # Remove any extra '/' characters that would cause a 400
-        url = urljoin(
-            self.base_url,
-            f'/api/v1/{endpoint}',
-        )
-
-        resp = req(
-            url=url,
-            json=json,
-            headers=headers,
-            params=params,
-            verify=self.verify
-        )
-        
-        if resp.status_code != 200:
-            exit_error(
-                f'API call failed: [{resp.status_code}] {resp.content}'
-            )
-
-        # Token might get updated between requests
-        if 'X-Security-Token' in resp.headers:
-            self.token = resp.headers['X-Security-Token']
-
-        return resp
-
+        self._client.login()
 
     def detections(self, last_id):
 
         params = {
-            '$orderBy': 'id asc',
-            '$filter': f'id gt {last_id}',
-            '$count': 1,
+            'order_by': 'id asc',
+            'filter': f'id gt {last_id}',
+            'count': True,
         }
 
         # Get the first batch of detections
         logging.info('Getting list of detections..')
 
-        resp = self.api_call('detections', params=params).json()
+        resp = self._client.list_detections(**params)
         count = resp['count']
         detections = resp['value']
         pages = math.ceil(count / self.page_size)
@@ -111,10 +59,10 @@ class EnterpriseInspector:
                 current_page = int(skip / self.page_size + 1)
                 logging.info(f'Getting page {current_page}.')
                 params.update({
-                    '$skip': skip,
-                    '$count': 0
+                    'skip': skip,
+                    'count': False
                 })
-                resp = self.api_call('detections', params=params).json()
+                resp = self._client.list_detections(**params)
                 detections += resp['value']
         
         return detections
@@ -133,7 +81,7 @@ class EnterpriseInspector:
         }
 
         try:
-            signature_type = signature_types[detection_details['moduleSignatureType']]
+            signature_type = signature_types[detection_details['module_signature_type']]
         except KeyError:
             signature_type = signature_types[0]
 
@@ -162,8 +110,8 @@ class EnterpriseInspector:
 
         detection_details.update({
             'type': detection_type,
-            'moduleSignatureType': signature_type,
-            'deepLink': deep_link
+            'module_signature_type': signature_type,
+            'deep_link': deep_link
         })
 
         return detection_details
@@ -172,9 +120,9 @@ class EnterpriseInspector:
     def detection_details(self, detection):
 
         # Get detection details
-        resp = self.api_call(f"detections/{detection['id']}").json()
+        resp = self._client.get_detection(detection['id']).to_dict()
 
         # Enrich detection details
-        detection_details = self.enrich(resp['DETECTION'])
+        detection_details = self.enrich(resp)
 
         return detection_details
